@@ -358,7 +358,7 @@ export class PhaserUIManager {
       }
     }
 	// ===== 新增：总数显示 =====
-	if (this.currentPanel === "help" && this.panels.help) {
+	if (this.currentPanel === 'help' && this.panels.help) {
 		this.panels.help.updateBallCount();
 		}
 	// ===== 新增结束 =====

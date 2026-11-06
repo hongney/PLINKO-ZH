@@ -72,28 +72,38 @@ export class HelpPanel extends UIPanel {
     helpText.setOrigin(0, 0).setAlpha(0);
     this.add(helpText);
 
-    let yPos = helpText.y + helpText.height + 20;
-		        // ===== 新增：当前小球总数显示 =====
-      const ballCountTitle = this.scene.add.text(
-        this.panelWidth / 2,
-        yPos,
-        "Ball Count",
-        { fontFamily: "Arial", fontSize: "14px", color: textColor }
-      );
-      ballCountTitle.setOrigin(0.5, 0);
-      this.add(ballCountTitle);
-      yPos += 28;
-      this.ballCountText = this.scene.add.text(
-        this.panelWidth / 2,
-        yPos,
-        "Balls: 0",
-        { fontFamily: "Arial", fontSize: "18px", color: textColor }
-      );
-      this.ballCountText.setOrigin(0.5, 0);
-      this.add(this.ballCountText);
-      yPos += 32;
-      // ===== 新增结束 =====
+    let yPos = helpText.y + helpText.height + 20;		      
+    // ===== 新增：当前小球总数显示 =====
+    const ballCountTitle = this.scene.add.text(
+      this.panelWidth / 2,
+      yPos,
+      'Ball Count',
+      {
+        fontFamily: 'Arial',
+        fontSize: '14px',
+        color: textColor
+      }
+    );
+    ballCountTitle.setOrigin(0.5, 0);
+    this.add(ballCountTitle);
 
+    yPos += 40;
+
+    this.ballCountText = this.scene.add.text(
+      this.panelWidth / 2,
+      yPos,
+      'Balls: 0',
+      {
+        fontFamily: 'Arial',
+        fontSize: '18px',
+        color: textColor
+      }
+    );
+    this.ballCountText.setOrigin(0.5, 0);
+    this.add(this.ballCountText);
+
+    yPos += 40;
+    // ===== 新增结束 =====
     // Number format section
     const formatTitle = this.scene.add.text(
       this.panelWidth / 2,
@@ -322,12 +332,12 @@ export class HelpPanel extends UIPanel {
   }
 
 	//总数显示
-	    updateBallCount() {
-      if (this.ballCountText) {
-        const count = this.scene.ballManager ? this.scene.ballManager.getBalls().length : 0;
-        this.ballCountText.setText(`Balls: ${count}`);
-      }
+  updateBallCount() {
+    if (this.ballCountText && this.scene.ballManager) {
+      const count = this.scene.ballManager.getBalls().length;
+      this.ballCountText.setText('Balls: ' + count);
     }
+  }
 	//结束
 	
   show() {
@@ -335,7 +345,7 @@ export class HelpPanel extends UIPanel {
     this.updateFormatButtons();
     this.updateThemeButtons();
 		  //总数显示
-	  this.updateBallCount();
+	this.updateBallCount();
 	  //结束
   }
 }
