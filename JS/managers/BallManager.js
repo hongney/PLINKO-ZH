@@ -60,9 +60,14 @@ export class BallManager {
         const despawnChance = 100 - this.gameState.tokenUpgrades[1].value
           .plus(this.gameState.tokenUpgrades[1].level - 1)
           .toNumber();
-        const shouldDespawn = adManager.noDespawn ? 
+        /*原代码const shouldDespawn = adManager.noDespawn ? 
           false : 
           (Phaser.Math.Between(0, 100) < despawnChance && ball.stage < maxStage);
+		  */
+		//底层消失
+		  const atLastStage = ball.stage >= maxStage;
+		  const shouldDespawn = atLastStage || (adManager.noDespawn ? false : Phaser.Math.Between(0, 100) < despawnChance);
+		//结束
         if (shouldDespawn || this.balls.length > 700) {
           ball.cleanup();
           this.balls.splice(i, 1);
