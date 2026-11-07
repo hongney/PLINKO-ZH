@@ -155,7 +155,7 @@ export class ZoneManager {
     };
     
     // Create shadow first (renders behind) - centered at same position
-    const shadow = this.scene.matter.add.image(x, y, texture, null, { ...physicsOptions, isSensor: true })
+    /*原代码const shadow = this.scene.matter.add.image(x, y, texture, null, { ...physicsOptions, isSensor: true })
       .setScale(shadowScaleX, shadowScaleY)
       .setAngle(angle)
       .setTint(0x000000)
@@ -164,13 +164,14 @@ export class ZoneManager {
     
     if (isCircle && circleRadius) {
       shadow.setCircle(circleRadius + circleShadowOffset, { ...physicsOptions, isSensor: true });
-    }
+    }*/
+	const shadow = this.scene.add.image(x, y, texture).setScale(shadowScaleX, shadowScaleY).setAngle(angle).setTint(0).setAlpha(0.9).setDepth(-61);//圆形障碍超出范围，-1改为-61
     
     // Create main shape on top
     const shape = this.scene.matter.add.image(x, y, texture, null, physicsOptions)
       .setScale(scaleX, finalScaleY)
       .setAngle(angle)
-      .setDepth(0); // Main shape renders on top
+      .setDepth(-60); // Main shape renders on top,,圆形障碍超出范围，0改-60
     
     if (isCircle && circleRadius) {
       shape.setCircle(circleRadius, physicsOptions);
