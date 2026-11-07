@@ -203,6 +203,11 @@ export class GameScene extends Phaser.Scene {
   }
 
   setupEventHandlers() {
+  // 【新增】先清掉旧监听：scene.restart()（转生）不会清 this.events，
+// 不清的话每转生一次监听器整套翻倍，一次点击会触发多次升级
+['zone-upgrade-requested', 'zone-price-updated', 'prestige-requested',
+'save-requested', 'reset-requested', 'theme-change']
+.forEach(evt => this.events.off(evt));
     // Handle UI events
     this.events.on('zone-upgrade-requested', (index) => {
       if (this.zoneManager.upgradeZone(index)) {
