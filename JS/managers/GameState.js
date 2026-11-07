@@ -172,7 +172,8 @@ export class GameState {
    * Calculate tokens earned from prestige
    * @returns {Decimal} - Number of tokens earned
    */
-  calculatePrestigeTokens() {
+  /*原代码
+    calculatePrestigeTokens() {
     let tokenCost = new Decimal(125000);
     let score = new Decimal(this.totalScore);
     let tokens = new Decimal(0);
@@ -189,7 +190,33 @@ export class GameState {
     
     return tokens.mul(mod).floor();
   }
+*/
+//修改代币计算逻辑
+  calculatePrestigeTokens(firstCost = 125000) {
+    let tokenCost = new Decimal(firstCost);
+    let score = new Decimal(this.totalScore);
+    let tokens = new Decimal(0);
 
+    const mod = this.tokenUpgrades[7].value
+      .mul(this.tokenUpgrades[7].valueModifier.pow(this.tokenUpgrades[7].level - 1))
+      .div(100);
+
+    if (score.gte(firstCost)) {
+      // 对数法直接定位步数，再退 5 步小循环校正：E300 时从 3.4 万次循环降到 <10 次
+      const n0 = score.div(firstCost).mul(0.02).plus(1).ln().div(Math.log(1.02)).floor().toNumber();
+      const start = Math.max(0, n0 - 5);
+      tokenCost = new Decimal(firstCost).mul(Decimal.pow(1.02, start));
+      score = score.minus(tokenCost.minus(firstCost).div(0.02)); // 闭式公式一次扣掉前 start 项的和
+      tokens = new Decimal(start);
+      while (score.gte(tokenCost)) {
+        score = score.minus(tokenCost);
+        tokens = tokens.add(1);
+        tokenCost = tokenCost.mul(1.02);
+      }
+    }
+
+    return tokens.mul(mod).floor();
+  }
   /**
    * Reset state for prestige
    */
