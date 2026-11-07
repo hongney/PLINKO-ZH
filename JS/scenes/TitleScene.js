@@ -20,6 +20,26 @@ export class TitleScene extends Phaser.Scene {
       frameWidth: 17,
       frameHeight: 17
     });
+
+    // 【优化·预下载】顺手预载 GameScene 需要的资产：用户停留在标题页的几秒里
+    // 就把这些图下完，点开始后不再有网络等待（手机弱网收益最大）
+    this.load.image('rectangle', 'assets/images/rectangle.png');
+    this.load.image('clearRectangle', 'assets/images/clearRectangle.png');
+    this.load.image('circle', 'assets/images/circle.png');
+    this.load.image('ball', 'assets/images/ball.png');
+    this.load.image('pres', 'assets/images/pres.png');
+    this.load.image('zone', 'assets/images/zone.png');
+    this.load.image('cursor', 'assets/images/cursor.png');
+    this.load.image('locked', 'assets/images/locked.png');
+    this.load.image('unlocked', 'assets/images/unlocked.png');
+    this.load.image('lockedUpgrade', 'assets/images/lockedUpgrade.png');
+    this.load.image('lockedStage', 'assets/images/lockedStage.png');
+    this.load.image('coin', 'assets/images/coin.png');
+    this.load.image('token', 'assets/images/token.png');
+    this.load.image('help', 'assets/images/help.png');
+    this.load.image('lock', 'assets/images/lock.png');
+    this.load.image('idea', 'assets/images/idea.png');
+    this.load.image('testBg', 'assets/images/testbg.png');
   }
 
   create() {
@@ -48,7 +68,16 @@ export class TitleScene extends Phaser.Scene {
     // Start game on click
     this.input.once('pointerdown', () => {
       this.clearBalls();
-      this.scene.start('GameScene');
+
+      // 【优化A】加载提示：GameScene 预载+构建期间标题页保持可见并闪烁（位置可按需调整）
+      const loadingText = this.add.text(540, 660, 'LOADING...', {
+        fontFamily: 'Arial', fontSize: '30px', color: '#555555', fontStyle: 'bold'
+      }).setOrigin(0.5).setDepth(100);
+      this.tweens.add({ targets: loadingText, alpha: 0.25, duration: 450, yoyo: true, repeat: -1 });
+
+      // 【优化A】launch 并行启动：不销毁标题页（原来的 scene.start 会立刻清屏造成黑屏），
+      // GameScene 第一帧渲染完后由 GameScene 侧关闭标题页（见 GameScene.create 末尾）
+      this.scene.launch('GameScene');
     });
   }
 

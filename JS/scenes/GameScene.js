@@ -30,6 +30,9 @@ export class GameScene extends Phaser.Scene {
   }
 
   preload() {
+    // 【优化·预载守卫】标题页已预载全部资产时直接跳过（转生/场景重启同样受益）
+    if (this.textures.exists('testBg')) return;
+
     this.load.image('rectangle', 'assets/images/rectangle.png');
     this.load.image('clearRectangle', 'assets/images/clearRectangle.png');
     this.load.image('circle', 'assets/images/circle.png');
@@ -197,6 +200,13 @@ export class GameScene extends Phaser.Scene {
     this.setupEventHandlers();
 
     this.drawBorders();
+
+    // 【优化A】GameScene 第一帧渲染完成后，再关闭标题场景（含 LOADING 提示，无缝衔接）
+    this.events.once('postrender', () => {
+      if (this.scene.get('TitleScene')) {
+        this.scene.stop('TitleScene');
+      }
+    });
 
     // Expose scene globally for ad callbacks
     window.scene = this;
@@ -520,8 +530,18 @@ export class GameScene extends Phaser.Scene {
 
       // Load zones
       if (saveData.zones && saveData.zones.length > 0) {
-        saveData.zones.forEach(zoneData => {
-          this.zoneManager.createZone(zoneData.level);
+        // 【优化B】先一次性把物理世界/相机边界扩到位（防止分帧期间球掉出世界），
+        // 第一个区域同步创建保证可玩，其余分帧创建，避免 create() 同步建 160×N 个障碍物卡住数秒
+        const zones = saveData.zones;
+        const totalH = zones.length * 1500;
+        this.matter.world.setBounds(0, 0, 680, totalH, 32, true, true, true, false);
+        this.cameras.main.setBounds(0, 0, 680, totalH);
+        zones.forEach((zoneData, idx) => {
+          if (idx === 0) {
+            this.zoneManager.createZone(zoneData.level);
+          } else {
+            this.time.delayedCall(idx * 80, () => this.zoneManager.createZone(zoneData.level));
+          }
         });
       } else {
         this.zoneManager.createZone();
@@ -645,16 +665,12 @@ export class GameScene extends Phaser.Scene {
   }
 
   generateGradientTexture(width, height, radius, colorTop, colorBottom, key) {
-    let rt;
-    
+    // 【优化C】key 已含主题后缀，同 key 参数固定，存在即跳过重绘（首屏 66 张 + 每次转生都省时）
     if (this.textures.exists(key)) {
-      // Reuse existing texture canvas
-      rt = this.textures.get(key);
-    } else {
-      // Create new texture canvas
-      rt = this.textures.createCanvas(key, width, height);
+      return;
     }
-    
+
+    const rt = this.textures.createCanvas(key, width, height);
     const ctx = rt.getContext();
 
     // gradient
