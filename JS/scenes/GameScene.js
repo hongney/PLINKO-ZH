@@ -339,7 +339,7 @@ export class GameScene extends Phaser.Scene {
       this.isDragging = false;
     }
   }
-
+/*原代码
   spawnBalls() {
     for (let i = 0; i < this.gameState.spawns.length; i++) {
       const spawn = this.gameState.spawns[i];
@@ -376,7 +376,42 @@ export class GameScene extends Phaser.Scene {
       }
     }
   }
-
+*/
+//生产间隔优化代码
+    spawnBalls() {
+      if (this.nextSpawnAt === undefined || this.nextSpawnAt.length !== this.gameState.spawns.length) {
+        this.nextSpawnAt = this.gameState.spawns.map(() => 0);
+      }
+      for (let i = 0; i < this.gameState.spawns.length; i++) {
+        const spawn = this.gameState.spawns[i];
+        if (spawn.level > 0 && this.gameState.zones[spawn.stage - 1]) {
+          let delayFrame = spawn.cooldown - spawn.speedModifier * (spawn.level - 1);
+          if (spawn.level > 10) {
+            delayFrame = spawn.cooldown - spawn.speedModifier * 10;
+          }
+          if (this.adManager.doubleSpawn) {
+            delayFrame = Math.floor(delayFrame / 2);
+          }
+          const delayMs = delayFrame * this.TARGET_DELTA;
+          if (this.elapsedTime >= this.nextSpawnAt[i]) {
+            this.nextSpawnAt[i] = this.elapsedTime + delayMs;
+            const value = this.gameState.getSpawnValue(i);
+            this.ballManager.createBall(
+              -1,
+              // random x
+              spawn.y,
+              i,
+              // sprite frame
+              delayFrame,
+              spawn.stage,
+              value,
+              spawn.level
+            );
+            this.gameState.stats.totalBallsSpawned++;
+          }
+        }
+      }
+    }
   scoreBall(ball) {
     const zone = this.gameState.zones[ball.stage - 1];
     if (!zone) return;
