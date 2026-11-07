@@ -21,7 +21,7 @@ export const GAME_CONFIG = {
     }
   },
   ball: {
-    friction: 0.01,
+    friction: 0,
     bounce: 0.5,
     maxBalls: 700
   },
