@@ -11,7 +11,7 @@ export const SPAWN_CONFIGS = [
     y: 90,
     stage: 1,
     speedModifier: 25,
-    costModifier: 1.5,
+    costModifier: 4.5,
     valueModifier: 1.8,
     cost: 20
   },
