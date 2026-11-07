@@ -71,6 +71,203 @@ export class HelpPanel extends UIPanel {
     );
     helpText.setOrigin(0, 0).setAlpha(0);
     this.add(helpText);
+	      // ===== 新增：导出/导入进度 Start（触屏增强版） =====
+      const BOX_Y = 54;    // 桌面模式：文字窗口顶部（面板内局部坐标）
+      const BOX_H = 40;    // 桌面模式：文字窗口高度
+
+      // ---- 1) DOM 覆盖层：文字窗口 + Export/Import 原生按钮（一个容器） ----
+      if (window.__plinkoIoTimer) clearInterval(window.__plinkoIoTimer);
+      const oldWrap = document.getElementById("plinko-io-wrap");
+      if (oldWrap) oldWrap.remove();
+      const wrap = document.createElement("div");
+      wrap.id = "plinko-io-wrap";
+      wrap.style.cssText =
+        "position:fixed;z-index:9999;display:none;flex-direction:column;gap:6px;" +
+        "font-family:Arial;touch-action:manipulation;-webkit-tap-highlight-color:transparent;";
+      document.body.appendChild(wrap);
+
+      const codeBox = document.createElement("textarea");
+      codeBox.placeholder = "EXPORT: click Export, code appears here.\nIMPORT: paste code here, then click Import.";
+      codeBox.setAttribute("autocapitalize", "off");
+      codeBox.setAttribute("autocomplete", "off");
+      codeBox.setAttribute("spellcheck", "false");
+      codeBox.setAttribute("enterkeyhint", "go");
+      codeBox.style.cssText =
+        "width:100%;box-sizing:border-box;resize:none;padding:4px 6px;outline:none;" +
+        "border-radius:6px;line-height:1.3;";
+      wrap.appendChild(codeBox);
+
+      const btnRow = document.createElement("div");
+      btnRow.style.cssText = "display:flex;gap:8px;";
+      wrap.appendChild(btnRow);
+
+      const mkBtn = (text) => {
+        const b = document.createElement("button");
+        b.textContent = text;
+        b.style.cssText =
+          "flex:1;border-radius:6px;font-family:Arial;font-weight:bold;cursor:pointer;" +
+          "padding:6px 0;touch-action:manipulation;user-select:none;-webkit-user-select:none;" +
+          "-webkit-appearance:none;";
+        return b;
+      };
+      const btnExport = mkBtn("Export");
+      const btnImport = mkBtn("Import");
+      btnRow.appendChild(btnExport);
+      btnRow.appendChild(btnImport);
+
+      const statusLine = document.createElement("div");
+      statusLine.style.cssText = "font-size:12px;min-height:16px;text-align:center;";
+      wrap.appendChild(statusLine);
+
+      const applyTheme = () => {
+        const dark = this.gameState.theme === "dark";
+        codeBox.style.background = dark ? "#2b3a4a" : "#e8edf4";
+        codeBox.style.color = dark ? "#ffffff" : "#222222";
+        codeBox.style.border = "2px solid " + (dark ? "#4d6072" : "#9fb2c8");
+        [btnExport, btnImport].forEach((b) => {
+          b.style.background = dark ? "#34495e" : "#5a7ca6";
+          b.style.color = "#ffffff";
+          b.style.border = "2px solid " + (dark ? "#4d6072" : "#3f5f8a");
+        });
+      };
+
+      this.showCodeBox = (visible) => {
+        if (!visible) { wrap.style.display = "none"; return; }
+        const canvas = this.scene.game.canvas;
+        const rect = canvas.getBoundingClientRect();
+        const sx = rect.width / this.scene.game.config.width;
+        const sy = rect.height / this.scene.game.config.height;
+        const m = this.getWorldTransformMatrix();
+        applyTheme();
+        if (sx < 0.75 || sy < 0.75) {
+          // 手机/小屏：居中大面板模式（按钮大、能看清，不依赖 Phaser 触摸）
+          this._ioSmall = true;
+          wrap.style.left = "50%";
+          wrap.style.top = "40%";
+          wrap.style.transform = "translate(-50%, -50%)";
+          wrap.style.width = "86%";
+          wrap.style.maxWidth = "420px";
+          codeBox.style.height = "72px";
+          codeBox.style.fontSize = "14px";
+          btnExport.style.height = "36px";
+          btnImport.style.height = "36px";
+          btnExport.style.fontSize = "14px";
+          btnImport.style.fontSize = "14px";
+        } else {
+          // 桌面：精确对齐面板内位置
+          this._ioSmall = false;
+          wrap.style.left = rect.left + (m.tx + 16) * sx + "px";
+          wrap.style.top = rect.top + (m.ty + BOX_Y) * sy + "px";
+          wrap.style.transform = "none";
+          wrap.style.width = (this.panelWidth - 32) * sx + "px";
+          wrap.style.maxWidth = "none";
+          codeBox.style.height = BOX_H * sy + "px";
+          codeBox.style.fontSize = Math.max(11, 12 * sy) + "px";
+          btnExport.style.height = Math.max(24, 30 * sy) + "px";
+          btnImport.style.height = Math.max(24, 30 * sy) + "px";
+          btnExport.style.fontSize = "12px";
+          btnImport.style.fontSize = "12px";
+        }
+        wrap.style.display = "flex";
+      };
+
+      // 可见期间持续校正位置（应对手机键盘/地址栏引起的视口变化）
+      window.__plinkoIoTimer = setInterval(() => {
+        try {
+          if (wrap.isConnected && wrap.style.display !== "none") this.showCodeBox(true);
+        } catch (e) {}
+      }, 400);
+
+      this.showMsg = (text) => {
+        statusLine.textContent = text;
+        statusLine.style.color = "#7cfc00";
+        if (this.msgText) this.msgText.destroy();
+        this.msgText = this.scene.add.text(this.panelWidth / 2, 134, text, {
+          fontFamily: "Arial", fontSize: "11px", color: "#7cfc00"
+        }).setOrigin(0.5);
+        this.add(this.msgText);
+        this.scene.tweens.add({
+          targets: this.msgText, alpha: 0, delay: 1200, duration: 400,
+          onComplete: () => { if (this.msgText) { this.msgText.destroy(); this.msgText = null; } }
+        });
+      };
+
+      this.showMsgErr = (text) => {
+        statusLine.textContent = text;
+        statusLine.style.color = "#ff6b6b";
+        if (this.msgText) this.msgText.destroy();
+        this.msgText = this.scene.add.text(this.panelWidth / 2, 134, text, {
+          fontFamily: "Arial", fontSize: "11px", color: "#ff6b6b",
+          wordWrap: { width: this.panelWidth - 40 }, align: "center"
+        }).setOrigin(0.5);
+        this.add(this.msgText);
+        this.scene.time.delayedCall(3000, () => {
+          if (this.msgText) { this.msgText.destroy(); this.msgText = null; }
+        });
+      };
+
+      // 回车 = 导入（电脑按 Enter，手机键盘按 Go）
+      codeBox.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" && !e.shiftKey) {
+          e.preventDefault();
+          this.handleImport();
+        }
+      });
+
+      this.handleExport = () => {
+        try {
+          if (this.scene.saveManager) this.scene.saveManager.save(this.gameState);
+          const raw = localStorage.getItem("plinko_save");
+          if (!raw) throw new Error("no save");
+          const code = "PLINKO:" + btoa(unescape(encodeURIComponent(raw)));
+          codeBox.value = code;
+          if (!this._ioSmall) { codeBox.focus(); codeBox.select(); }
+          this.showMsg("Exported!");
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(code).then(() => this.showMsg("Copied!")).catch(() => {});
+          }
+        } catch (err) {
+          console.error("[Plinko] 导出失败:", err);
+          this.showMsgErr("Export failed!");
+        }
+      };
+
+      this.handleImport = () => {
+        const raw = (codeBox.value || "").trim();
+        if (!raw) { this.showMsg("Paste code first!"); return; }
+        let json = null;
+        try {
+          let b64 = raw.replace(/\s+/g, "");   // 清掉换行/空格
+          const p = b64.indexOf("PLINKO:");
+          if (p >= 0) b64 = b64.slice(p + 7);
+          json = decodeURIComponent(escape(atob(b64)));
+        } catch (err) {
+          console.error("[Plinko] base64 解码失败:", err);
+          if (raw.startsWith("{")) {
+            json = raw;                        // 兜底：直接粘贴原始 JSON 也认
+          } else {
+            this.showMsgErr("Code corrupted! 重新导出，先清空窗口再粘贴");
+            return;
+          }
+        }
+        try {
+          const data = JSON.parse(json);
+          const ok = data && typeof data === "object" &&
+            (typeof data.money !== "undefined" || typeof data.tokens !== "undefined" || (data.spawns && data.spawns.length));
+          if (!ok) throw new Error("missing progress fields");
+          localStorage.setItem("plinko_save", json);
+          console.log("[Plinko] 存档已写入，即将刷新页面");
+          this.showMsg("Loaded! Reloading...");
+          setTimeout(() => location.reload(), 400);
+        } catch (err) {
+          console.error("[Plinko] 导入失败:", err);
+          this.showMsgErr("Invalid code! " + (err && err.message ? err.message : ""));
+        }
+      };
+
+      btnExport.addEventListener("click", () => this.handleExport());
+      btnImport.addEventListener("click", () => this.handleImport());
+      // ===== 新增：导出/导入进度 End =====
 
     let yPos = helpText.y + helpText.height + 20;		      
     // ===== 新增：当前小球总数显示 =====
@@ -347,5 +544,10 @@ export class HelpPanel extends UIPanel {
 		  //总数显示
 	this.updateBallCount();
 	  //结束
+	this.showCodeBox(true); // 存档：面板显示时同步显示导入/导出窗口
   }
+  hide() {
+	  super.hide();
+	  this.showCodeBox(false); // 存档：面板隐藏时同步隐藏 DOM 窗口
+	  }
 }
